@@ -3,45 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Изображение для загрузки в магазин </title>
+  <title>Изображения для загрузки в магазин</title>
   <style>
     body {
-      font-family: system-ui, sans-serif;
-      background: #f5f5f5;
+      background-color: #1e1e1e;
+      color: #fff;
+      font-family: Arial, sans-serif;
       margin: 30px;
+      font-weight: bold;
     }
     h1 {
-      font-size: 20px;
+      font-size: 22px;
       margin-bottom: 20px;
     }
     .container {
-      max-width: 900px;
+      max-width: 1000px;
       margin: 0 auto;
     }
-    .row {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      background: #fff;
-      border-radius: 10px;
-      padding: 10px;
-      margin-bottom: 15px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    }
-    img {
-      width: 200px;
-      border-radius: 6px;
-      background: #eee;
-      object-fit: contain;
-    }
-    a {
-      flex: 1;
-      word-break: break-all;
-      color: #0070c9;
-      text-decoration: none;
-    }
-    a:hover {
-      text-decoration: underline;
+    .toolbar {
+      margin-bottom: 25px;
     }
     button {
       padding: 8px 14px;
@@ -51,17 +31,66 @@
       color: white;
       border: none;
       border-radius: 6px;
+      margin-right: 10px;
     }
-    .toolbar {
-      margin-bottom: 25px;
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      background: #2a2a2a;
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin-bottom: 10px;
+    }
+    img {
+      height: 30px;
+      border-radius: 4px;
+      background: #444;
+      object-fit: contain;
+    }
+    a {
+      flex: 1;
+      word-break: break-all;
+      color: #7db9ff;
+      text-decoration: none;
+      font-weight: normal;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .index {
+      background: #3a3a3a;
+      padding: 5px 8px;
+      border-radius: 5px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.2s;
+    }
+    .index:hover {
+      background: #505050;
+    }
+    .copied {
+      position: absolute;
+      background: #0070c9;
+      color: #fff;
+      padding: 5px 8px;
+      border-radius: 5px;
+      font-size: 12px;
+      transform: translateY(-150%);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .show {
+      opacity: 1;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Изображение для загрузки в магазин</h1>
+    <h1>Изображения для загрузки в магазин</h1>
     <div class="toolbar">
-      <button id="copyBtn">Скопировать все ссылки</button>
+      <button id="copyAll">Скопировать все</button>
+      <button id="copySelected">Копировать выбранное</button>
     </div>
     <div id="gallery">Загрузка...</div>
   </div>
@@ -70,8 +99,15 @@
     const owner = "indexmod";
     const repo = "tilda-kosti";
 
+    function generateIndex(filename) {
+      const name = filename.replace(/\.[^/.]+$/, ""); // убираем расширение
+      const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+      return `${name}-${date}-${random}`.toUpperCase();
+    }
+
     async function loadImages() {
-      const gallery = document.getElementById('gallery');
+      const gallery = document.getElementById("gallery");
       try {
         const apiUrl = `https://api.github.com/repos/${owner}/${repo}/git/trees/main?recursive=1`;
         const res = await fetch(apiUrl);
@@ -80,32 +116,57 @@
         const images = data.tree.filter(f => /\.(png|jpe?g|webp|gif)$/i.test(f.path));
 
         if (!images.length) {
-          gallery.textContent = 'Нет изображений';
+          gallery.textContent = "Нет изображений";
           return;
         }
 
-        gallery.innerHTML = '';
+        gallery.innerHTML = "";
         let allLinks = [];
 
         images.forEach(img => {
           const raw = `https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/main/${img.path}`;
+          const index = generateIndex(img.path.split('/').pop());
           allLinks.push(raw);
-          const row = document.createElement('div');
-          row.className = 'row';
+
+          const row = document.createElement("div");
+          row.className = "row";
           row.innerHTML = `
+            <input type="checkbox" class="check">
+            <span class="index" data-copy="${index}">${index}</span>
             <img src="${raw}" alt="${img.path}">
             <a href="${raw}" target="_blank">${raw}</a>
+            <div class="copied">Скопировано!</div>
           `;
+
+          const idxEl = row.querySelector(".index");
+          const copiedEl = row.querySelector(".copied");
+          idxEl.onclick = () => {
+            navigator.clipboard.writeText(index);
+            copiedEl.classList.add("show");
+            setTimeout(() => copiedEl.classList.remove("show"), 1000);
+          };
+
           gallery.appendChild(row);
         });
 
-        document.getElementById('copyBtn').onclick = () => {
-          navigator.clipboard.writeText(allLinks.join('\n'));
-          alert('Все ссылки скопированы в буфер обмена!');
+        document.getElementById("copyAll").onclick = () => {
+          navigator.clipboard.writeText(allLinks.join("\n"));
+          alert("Все ссылки скопированы!");
+        };
+
+        document.getElementById("copySelected").onclick = () => {
+          const selected = [...document.querySelectorAll(".check:checked")]
+            .map(ch => ch.closest(".row").querySelector("a").href);
+          if (!selected.length) {
+            alert("Ничего не выбрано!");
+            return;
+          }
+          navigator.clipboard.writeText(selected.join("\n"));
+          alert("Выбранные ссылки скопированы!");
         };
 
       } catch (e) {
-        gallery.textContent = 'Ошибка загрузки: ' + e.message;
+        gallery.textContent = "Ошибка: " + e.message;
       }
     }
 
