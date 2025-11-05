@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Изображения для загрузки в магазин</title>
+
+  <!-- встроенный фавикон (череп, SVG base64) -->
+  <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjZmZmIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDIiIGhlaWdodD0iMTAyIiB2aWV3Qm94PSIwIDAgMjQgMjQiPjxwYXRoIGQ9Ik0xMiAyYy01LjUyIDAtMTAgNC40OC0xMCAxMHM0LjQ4IDEwIDEwIDEwYzUuNTIgMCAxMC00LjQ4IDEwLTEwUzE3LjUyIDIgMTIgMnptMCAxOGMtMy4zMSAwLTYtMi42OS02LTYgMC0zLjMxIDIuNjktNiA2LTYgMy4zMSAwIDYgMi42OSA2IDZzLTIuNjkgNi02IDZ6bS0yLjUtNWMtLjgzIDAtMS41LjY3LTEuNSAxLjVzLjY3IDEuNSAxLjUgMS41IDEuNS0uNjcgMS41LTEuNS0uNjctMS41LTEuNS0xLjV6bTUgMGMtLjgzIDAtMS41LjY3LTEuNSAxLjVzLjY3IDEuNSAxLjUgMS41IDEuNS0uNjcgMS41LTEuNS0uNjctMS41LTEuNS0xLjV6Ii8+PC9zdmc+" />
+
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css">
 
   <style>
@@ -139,9 +144,10 @@
 
     <h1>Изображения для загрузки в магазин</h1>
     <p class="rule">
-      Артикул формируется по правилу: <br>
-      <b>№ + имя папки + дата (ГГГГММДД) + трёхбуквенный код</b>.
-      Пример: <code>003-POSTERS-20251105-ABX</code>
+      Артикул присваивается один на папку товара. <br>
+      Формат: <b>№ + имя папки + дата (ГГГГММДД) + трёхбуквенный код</b>.
+      Пример: <code>003-POSTERSET-20251105-QFX</code><br>
+      Все изображения внутри одной папки получают одинаковый артикул.
     </p>
 
     <div class="toolbar">
@@ -156,16 +162,23 @@
     const owner = "indexmod";
     const repo = "tilda-kosti";
 
-    // === Новое правило генерации артикула ===
-    // В основе — порядковый номер + имя папки + дата + трёхбуквенный код
     let counter = 1;
-    function generateIndex(filepath) {
-      const parts = filepath.split('/');
-      const folder = parts.length > 1 ? parts[parts.length - 2] : 'ROOT';
+    const folderCodes = {};
+
+    function createFolderIndex(folder) {
       const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const random = Math.random().toString(36).substring(2, 5).toUpperCase();
       const num = String(counter++).padStart(3, '0');
       return `${num}-${folder}-${date}-${random}`.toUpperCase();
+    }
+
+    function getIndexForFile(filepath) {
+      const parts = filepath.split('/');
+      const folder = parts.length > 1 ? parts[parts.length - 2] : 'ROOT';
+      if (!folderCodes[folder]) {
+        folderCodes[folder] = createFolderIndex(folder);
+      }
+      return folderCodes[folder];
     }
 
     async function loadImages() {
@@ -184,11 +197,12 @@
 
         gallery.innerHTML = "";
         let allLinks = [];
-        counter = 1; // сбрасываем счётчик при загрузке
+        counter = 1;
+        Object.keys(folderCodes).forEach(k => delete folderCodes[k]);
 
         images.forEach(img => {
           const raw = `https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/main/${img.path}`;
-          const index = generateIndex(img.path);
+          const index = getIndexForFile(img.path);
           allLinks.push(raw);
 
           const row = document.createElement("div");
