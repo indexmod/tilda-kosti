@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Изображения для загрузки в магазин</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css">
+
   <style>
     body {
       background-color: #1e1e1e;
@@ -12,17 +14,29 @@
       margin: 30px;
       font-weight: bold;
     }
+
     h1 {
       font-size: 22px;
-      margin-bottom: 20px;
+      margin-bottom: 10px;
     }
+
+    p.rule {
+      font-size: 14px;
+      font-weight: normal;
+      color: #bdbdbd;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
     .container {
       max-width: 1000px;
       margin: 0 auto;
     }
+
     .toolbar {
       margin-bottom: 25px;
     }
+
     button {
       padding: 8px 14px;
       font-size: 14px;
@@ -32,7 +46,29 @@
       border: none;
       border-radius: 6px;
       margin-right: 10px;
+      transition: background 0.2s;
     }
+
+    button:hover {
+      background: #0b84ec;
+    }
+
+    .afro-icon {
+      display: inline-grid;
+      place-items: center;
+      width: 64px;
+      height: 64px;
+      background: #000;
+      border-radius: 50%;
+      margin-bottom: 15px;
+    }
+
+    .afro-icon .mdi {
+      font-size: 34px;
+      color: #fff;
+      line-height: 1;
+    }
+
     .row {
       display: flex;
       align-items: center;
@@ -41,13 +77,16 @@
       border-radius: 8px;
       padding: 8px 10px;
       margin-bottom: 10px;
+      position: relative;
     }
+
     img {
       height: 30px;
       border-radius: 4px;
       background: #444;
       object-fit: contain;
     }
+
     a {
       flex: 1;
       word-break: break-all;
@@ -55,9 +94,11 @@
       text-decoration: none;
       font-weight: normal;
     }
+
     a:hover {
       text-decoration: underline;
     }
+
     .index {
       background: #3a3a3a;
       padding: 5px 8px;
@@ -65,21 +106,26 @@
       cursor: pointer;
       user-select: none;
       transition: background 0.2s;
+      font-size: 13px;
     }
+
     .index:hover {
       background: #505050;
     }
+
     .copied {
       position: absolute;
+      right: 15px;
+      top: 5px;
       background: #0070c9;
       color: #fff;
-      padding: 5px 8px;
+      padding: 3px 8px;
       border-radius: 5px;
       font-size: 12px;
-      transform: translateY(-150%);
       opacity: 0;
       transition: opacity 0.3s;
     }
+
     .show {
       opacity: 1;
     }
@@ -87,11 +133,22 @@
 </head>
 <body>
   <div class="container">
+    <div class="afro-icon" role="img" aria-label="Афровик — череп">
+      <span class="mdi mdi-skull" aria-hidden="true"></span>
+    </div>
+
     <h1>Изображения для загрузки в магазин</h1>
+    <p class="rule">
+      Артикул формируется по правилу: <br>
+      <b>№ + имя папки + дата (ГГГГММДД) + трёхбуквенный код</b>.
+      Пример: <code>003-POSTERS-20251105-ABX</code>
+    </p>
+
     <div class="toolbar">
       <button id="copyAll">Скопировать все</button>
       <button id="copySelected">Копировать выбранное</button>
     </div>
+
     <div id="gallery">Загрузка...</div>
   </div>
 
@@ -99,11 +156,16 @@
     const owner = "indexmod";
     const repo = "tilda-kosti";
 
-    function generateIndex(filename) {
-      const name = filename.replace(/\.[^/.]+$/, ""); // убираем расширение
+    // === Новое правило генерации артикула ===
+    // В основе — порядковый номер + имя папки + дата + трёхбуквенный код
+    let counter = 1;
+    function generateIndex(filepath) {
+      const parts = filepath.split('/');
+      const folder = parts.length > 1 ? parts[parts.length - 2] : 'ROOT';
       const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const random = Math.random().toString(36).substring(2, 5).toUpperCase();
-      return `${name}-${date}-${random}`.toUpperCase();
+      const num = String(counter++).padStart(3, '0');
+      return `${num}-${folder}-${date}-${random}`.toUpperCase();
     }
 
     async function loadImages() {
@@ -122,10 +184,11 @@
 
         gallery.innerHTML = "";
         let allLinks = [];
+        counter = 1; // сбрасываем счётчик при загрузке
 
         images.forEach(img => {
           const raw = `https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/main/${img.path}`;
-          const index = generateIndex(img.path.split('/').pop());
+          const index = generateIndex(img.path);
           allLinks.push(raw);
 
           const row = document.createElement("div");
